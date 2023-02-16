@@ -1,0 +1,62 @@
+<?php
+
+namespace App;
+
+use Spot\EntityInterface as Entity;
+use Spot\MapperInterface as Mapper;
+use Spot\EventEmitter;
+
+use Tuupola\Base62;
+use Psr\Log\LogLevel;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\Exception\UnsatisfiedDependencyException;
+
+
+
+class Balance extends \Spot\Entity
+{
+    protected static $table = "balance";
+    protected static $mapper = "App\Entity\Balance";
+
+    public static function fields()
+    {
+        return [
+            "guid" => ["type" => "guid", "unsigned" => true, "primary" => true, "unique" => true],
+            "merchant_id" => ["type" => "guid", "required" => true],
+            "nominal" => ["type" => "decimal", "required" => true],
+            "service_fee" => ["type" => "decimal", "required" => false],
+            "result" => ["type" => "decimal", "required" => true],
+            "type" => ["type" => "string", "required" => true],
+            "trx_id" => ["type" => "guid", "required" => true],
+        
+
+            "created_at"   => ["type" => "datetime", "value" => new \DateTime(), "required" => true],
+            "updated_at"   => ["type" => "datetime", "value" => new \DateTime(), "required" => true],
+        ];
+    }
+
+    public static function events(EventEmitter $emitter)
+    {
+        $emitter->on("beforeInsert", function (\Spot\EntityInterface $entity, \Spot\MapperInterface $mapper) {
+            // $entity->uid = (new Base62)->encode(random_bytes(9));
+            $uuid = Uuid::uuid4();
+            $entity->guid = $uuid;
+
+        });
+
+        $emitter->on("beforeUpdate", function (\Spot\EntityInterface $entity, \Spot\MapperInterface $mapper) {
+            $entity->updated_at = new \DateTime();
+        });
+    }
+
+
+    public function timestamp()
+    {
+        return $this->updated_at->getTimestamp();
+    }
+
+    public function etag()
+    {
+        return md5($this->name . $this->timestamp());
+    }
+}
